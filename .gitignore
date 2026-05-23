@@ -1,1 +1,4 @@
 .env
+data/
+build/basic_auth.ini
+

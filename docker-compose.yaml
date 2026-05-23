@@ -28,18 +28,20 @@ services:
       AWS_ACCESS_KEY_ID: admin
       AWS_SECRET_ACCESS_KEY: password
       MLFLOW_FLASK_SERVER_SECRET_KEY: ${MLFLOW_FLASK_SERVER_SECRET_KEY}
+      MLFLOW_AUTH_CONFIG_PATH: /mlflow/basic_auth.ini
       MLFLOW_TRACKING_AUTH_REGISTER: "false"
     command:
       - bash
       - -c
       - |
-        pip install boto3 psycopg2-binary flask-bcrypt --quiet
+        pip install mlflow[auth] boto3 psycopg2-binary --quiet
         mlflow server --host 0.0.0.0 --port 5000 \
             --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB} \
             --default-artifact-root s3://${DEFAULT_BUCKET_NAME}/mlflow \
             --artifacts-destination s3://${DEFAULT_BUCKET_NAME}/mlflow \
             --serve-artifacts \
-            --app-name basic-auth
+            --app-name basic-auth \
+            --allowed-hosts "89.111.163.12:5050,89.111.163.12:*,localhost:*,127.0.0.1:*"
     expose:
       - "5000"
     ports:
@@ -48,10 +50,7 @@ services:
       - internal
     volumes:
       - ./data/mlflow:/mlflow
-    restart: unless-stopped
-    depends_on:
-      - postgres
-      - mc
+      - ./build/basic_auth.ini:/mlflow/basic_auth.ini 
 
   minio:
     image: quay.io/minio/minio
@@ -72,7 +71,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    restart: unless-stopped
+    restart: always
 
   mc:
     image: quay.io/minio/mc
